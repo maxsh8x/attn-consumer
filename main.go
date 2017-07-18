@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 
+	"fmt"
+
 	raven "github.com/getsentry/raven-go"
 )
 
@@ -42,6 +44,25 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = connect.Ping()
-	failOnError(err, "ClickHouse doesn't respond")
+	eventTypes := [3]string{"display", "click", "view"}
+	for _, event := range eventTypes {
+		connect.Exec(fmt.Sprintf(`
+			CREATE TABLE %s (
+				date DateTime,
+				mobile Boolean,
+				platform FixedString(32),
+				os FixedString(32),
+				vrowser FixedString(32),
+				version FixedString(32),
+				ip FixedString(16),
+				offer_id UInt32,
+				placement_id UInt32,
+				widget_id UInt32,
+				time_spent UInt32,
+				scrolled Boolean,
+				latitude Float32,
+				lontitude Float32
+			) engine=Memory
+		`, event))
+	}
 }
