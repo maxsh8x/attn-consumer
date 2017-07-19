@@ -15,6 +15,13 @@ func failOnError(err error, msg string) {
 	}
 }
 
+func warnOnError(err error, msg string) {
+	if err != nil {
+		raven.CaptureError(err, nil)
+		log.Printf("%s: %s", msg, err)
+	}
+}
+
 // BoolToUInt8 is converter from bool to int8 (ClickHouse feature)
 func BoolToUInt8(v bool) int8 {
 	if v {

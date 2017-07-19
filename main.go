@@ -51,9 +51,15 @@ func task(connect *sql.DB, b *safeBuffer, event string) {
 			bufferedMsgs := b.Receive()
 			for _, d := range bufferedMsgs {
 				msg := common.RabbitMSG{}
-				json.Unmarshal([]byte(d.Body), &msg)
+				if err := json.Unmarshal([]byte(d.Body), &msg); err != nil {
+					warnOnError(err, "Failed to parse json")
+					d.Nack(false, false)
+					continue
+				}
 				if _, err := execFunctions[event](stmt, &msg); err != nil {
-					failOnError(err, "Failed to exec query")
+					warnOnError(err, "Failed to exec query")
+					d.Nack(false, false)
+					continue
 				}
 				d.Ack(false)
 			}
@@ -107,7 +113,7 @@ func main() {
 
 		go func(event string) {
 			msgs, err := ch.Consume(
-				event, // queue
+				event, // queueFor unroutable messages, the broker will issue a confirm once the exchange verifies a message
 				"",    // consumer
 				false, // auto-ack
 				false, // exclusive
