@@ -42,6 +42,28 @@ func initEvents() {
 	initDisplayEvent()
 }
 
+func task(connect *sql.DB, b *safeBuffer, event string) {
+	for range time.NewTicker(time.Minute).C {
+		if b.Len() > 0 {
+			tx, _ := connect.Begin()
+			stmt, _ := tx.Prepare(insertQueries[event])
+
+			bufferedMsgs := b.Receive()
+			for _, d := range bufferedMsgs {
+				msg := common.RabbitMSG{}
+				json.Unmarshal([]byte(d.Body), &msg)
+				if _, err := execFunctions[event](stmt, &msg); err != nil {
+					failOnError(err, "Failed to exec query")
+				}
+				d.Ack(false)
+			}
+			if err := tx.Commit(); err != nil {
+				failOnError(err, "Failed to commit query")
+			}
+		}
+	}
+}
+
 func main() {
 	appConfig := getConfig()
 	raven.SetDSN(appConfig.SentryDSN)
@@ -95,27 +117,8 @@ func main() {
 			)
 			failOnError(err, "Failed to register a consumer for "+event)
 			buff := safeBuffer{}
-			go func(b *safeBuffer) {
-				for range time.NewTicker(time.Minute).C {
-					if b.Len() > 0 {
-						tx, _ := connect.Begin()
-						stmt, _ := tx.Prepare(insertQueries[event])
 
-						bufferedMsgs := b.Receive()
-						for _, d := range bufferedMsgs {
-							msg := common.RabbitMSG{}
-							json.Unmarshal([]byte(d.Body), &msg)
-							if _, err := execFunctions[event](stmt, &msg); err != nil {
-								failOnError(err, "Failed to exec query")
-							}
-							d.Ack(false)
-						}
-						if err := tx.Commit(); err != nil {
-							failOnError(err, "Failed to commit query")
-						}
-					}
-				}
-			}(&buff)
+			go task(connect, &buff, event)
 			for d := range msgs {
 				buff.Append(d)
 			}
