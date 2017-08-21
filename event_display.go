@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/kshvakov/clickhouse"
-	common "gitlab.com/maksimsharnin/attn-common"
+	common "gitlab.com/attnstore/attn-common"
 )
 
 func execDisplayEvent(stmt *sql.Stmt, msg *common.RabbitMSG) (sql.Result, error) {
