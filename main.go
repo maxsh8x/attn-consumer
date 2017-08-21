@@ -10,7 +10,7 @@ import (
 	raven "github.com/getsentry/raven-go"
 	"github.com/kshvakov/clickhouse"
 	"github.com/streadway/amqp"
-	common "gitlab.com/maksimsharnin/attn-common"
+	common "gitlab.com/attnstore/attn-common"
 )
 
 var (
